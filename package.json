@@ -1,15 +1,13 @@
 {
-  "name": "uzi-discord-bot",
-  "version": "1.0.5.3",
-  "description": "A Discord bot that uses Google Gemini AI to roleplay as Uzi Doorman",
+  "name": "dr-nefario-bot",
+  "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
   },
   "keywords": [
     "discord",
     "bot",
-    "uzi doorman",
+    "IDK",
     "gemini",
     "google-ai"
   ],
