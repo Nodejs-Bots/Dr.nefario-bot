@@ -1,16 +1,9 @@
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Collection,
-  Events,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-} from "discord.js";
+import { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+
 dotenv.config();
 
 // --- Logging Setup ---
@@ -22,138 +15,103 @@ function log(message) {
   fs.appendFileSync(logFile, line);
 }
 
-// --- Check ENV ---
-if (!process.env.TOKEN) {
-  log("❌ ERROR: Discord bot token not found in .env");
-  process.exit(1);
-}
-if (!process.env.CLIENT_ID) {
-  log("❌ ERROR: CLIENT_ID not found in .env");
+// --- Validate ENV ---
+if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID || !process.env.GEMINI_API_KEY) {
+  log("❌ ERROR: Missing DISCORD_TOKEN, CLIENT_ID, or GEMINI_API_KEY in .env");
   process.exit(1);
 }
 
-// --- Bot Setup ---
+// --- Discord Client ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel],
 });
 
-const inventionIdeas = [
-  "Behold! My newest creation: the *Shrinking Banana Cannon!*",
-  "Aha! The Anti-Gravity Jelly Dispenser 3000 is complete!",
-  "Observe! The Freeze-Ray, but now... portable!",
-  "My latest experiment may or may not explode in 5 seconds... heh heh!",
-  "Oh dear! I’ve accidentally turned the minions into bubblegum again!",
-];
+// --- Gemini API ---
+const geminiApiUrl = "https://gemini.googleapis.com/v1beta2/models/gemini-2.5-flash:generateContent";
 
-const greetings = [
-  "Ah, greetings, my yellow minion associates!",
-  "Yes, yes, Dr. Nefario at your service!",
-  "Ah! You require my scientific brilliance?",
-  "What’s that smell? Oh yes… SCIENCE!",
-];
-
-const madResponses = [
-  "Bah! Nonsense! Science cannot be rushed!",
-  "Quiet! I’m calibrating my laser-fart-gun!",
-  "Hmm... the chemical reaction seems unstable. Delightful!",
-];
-
-const triggerWords = [
-  "invention",
-  "experiment",
-  "science",
-  "banana",
-  "lab",
-  "nefaio",
-  "dr.",
-  "professor",
-];
-
-// --- On Ready ---
-client.once(Events.ClientReady, (c) => {
-  log(`⚙️ Logged in as ${c.user.tag}`);
-  client.user.setActivity("Inventing chaotic gadgets...");
-});
-
-// --- On Message ---
-client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot) return;
-
-  const msg = message.content.toLowerCase();
-  if (
-    message.mentions.has(client.user) ||
-    triggerWords.some((word) => msg.includes(word))
-  ) {
-    const allResponses = [...inventionIdeas, ...greetings, ...madResponses];
-    const response = allResponses[Math.floor(Math.random() * allResponses.length)];
-    await message.reply(`**${response}**`);
-    log(`💬 Responded to ${message.author.tag} in #${message.channel.name}: "${response}"`);
+async function getGeminiReply(prompt) {
+  try {
+    const res = await axios.post(
+      geminiApiUrl,
+      { contents: prompt, model: "gemini-2.5-flash" },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return res.data.generatedContent || "Hmm… my inventions exploded!";
+  } catch (err) {
+    console.error("Gemini AI error:", err);
+    return "⚠️ Oops! My inventions exploded in the code again!";
   }
-});
+}
 
 // --- Slash Commands ---
 const commands = [
   new SlashCommandBuilder().setName("invention").setDescription("Dr. Nefario unveils a random invention."),
   new SlashCommandBuilder().setName("greet").setDescription("Dr. Nefario greets you."),
   new SlashCommandBuilder().setName("mad").setDescription("Dr. Nefario gets mad scientifically!"),
-].map((command) => command.toJSON());
+].map((c) => c.toJSON());
 
-// --- Register Commands ---
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
-
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 (async () => {
   try {
     log("Registering slash commands...");
     await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
     log("✅ Slash commands registered!");
-  } catch (error) {
-    log(`❌ Error registering commands: ${error}`);
+  } catch (err) {
+    log(`❌ Error registering commands: ${err}`);
   }
 })();
+
+// --- Ready Event ---
+client.once(Events.ClientReady, () => {
+  log(`⚙️ Logged in as ${client.user.tag}`);
+  client.user.setActivity("Inventing chaotic gadgets...");
+});
+
+// --- Message Handler ---
+client.on(Events.MessageCreate, async (message) => {
+  if (message.author.bot) return;
+
+  if (message.mentions.has(client.user)) {
+    const prompt = `
+      You are Dr. Nefario from Despicable Me, a quirky, eccentric scientist.
+      Respond in character to this message: "${message.content}"
+      Use funny, dramatic, scientific language. Keep it short and chaotic.
+    `;
+    const reply = await getGeminiReply(prompt);
+    await message.reply(reply);
+    log(`💬 Replied to ${message.author.tag} in #${message.channel.name}: "${reply}"`);
+  }
+});
 
 // --- Slash Command Handler ---
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-  const { commandName } = interaction;
 
-  try {
-    if (commandName === "invention") {
-      const reply = inventionIdeas[Math.floor(Math.random() * inventionIdeas.length)];
-      await interaction.reply(`🧪 **${reply}**`);
-      log(`🔧 /invention used by ${interaction.user.tag}`);
-    } else if (commandName === "greet") {
-      const reply = greetings[Math.floor(Math.random() * greetings.length)];
-      await interaction.reply(`👋 **${reply}**`);
-      log(`👋 /greet used by ${interaction.user.tag}`);
-    } else if (commandName === "mad") {
-      const reply = madResponses[Math.floor(Math.random() * madResponses.length)];
-      await interaction.reply(`💥 **${reply}**`);
-      log(`💥 /mad used by ${interaction.user.tag}`);
-    }
-  } catch (err) {
-    log(`❌ Error handling command ${commandName}: ${err}`);
+  const command = interaction.commandName;
+  let prompt;
+
+  if (command === "invention") {
+    prompt = "You are Dr. Nefario. Announce a chaotic, funny invention in character.";
+  } else if (command === "greet") {
+    prompt = "You are Dr. Nefario. Greet the user in character with eccentric, scientific language.";
+  } else if (command === "mad") {
+    prompt = "You are Dr. Nefario. Respond as if mad, in character, with dramatic scientific language.";
+  }
+
+  if (prompt) {
+    const reply = await getGeminiReply(prompt);
+    await interaction.reply(reply);
+    log(`🔧 /${command} used by ${interaction.user.tag}`);
   }
 });
 
-// --- Random automatic messages ---
-setInterval(async () => {
-  const guilds = client.guilds.cache;
-  for (const [id, guild] of guilds) {
-    const channels = guild.channels.cache.filter(
-      (ch) => ch.isTextBased() && ch.viewable
-    );
-    if (channels.size > 0) {
-      const channel = channels.random();
-      const msg = inventionIdeas[Math.floor(Math.random() * inventionIdeas.length)];
-      await channel.send(`🧪 **${msg}**`);
-      log(`🤖 Sent random invention to ${guild.name} in #${channel.name}`);
-    }
-  }
-}, Math.floor(Math.random() * (900000 - 300000) + 300000)); // every 5–15 minutes
-
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
