@@ -6,7 +6,7 @@ import axios from "axios";
 
 dotenv.config();
 
-// --- Logging Setup ---
+// --- Logging ---
 const logFile = path.resolve("./bot.log");
 function log(message) {
   const timestamp = new Date().toISOString();
@@ -16,8 +16,8 @@ function log(message) {
 }
 
 // --- Validate ENV ---
-if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID || !process.env.GEMINI_API_KEY) {
-  log("❌ ERROR: Missing DISCORD_TOKEN, CLIENT_ID, or GEMINI_API_KEY in .env");
+if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID || !process.env.GOOGLE_API_KEY) {
+  log("❌ ERROR: Missing DISCORD_TOKEN, CLIENT_ID, or GOOGLE_API_KEY in .env");
   process.exit(1);
 }
 
@@ -30,24 +30,22 @@ const client = new Client({
   ],
 });
 
-// --- Gemini API ---
-const geminiApiUrl = "https://gemini.googleapis.com/v1beta2/models/gemini-2.5-flash:generateContent";
-
-async function getGeminiReply(prompt) {
+// --- Google Generative AI Function ---
+async function getAIResponse(prompt) {
   try {
-    const res = await axios.post(
-      geminiApiUrl,
-      { contents: prompt, model: "gemini-2.5-flash" },
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate?key=${process.env.GOOGLE_API_KEY}`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        prompt: { text: prompt },
+        temperature: 0.7,
+        maxOutputTokens: 256,
       }
     );
-    return res.data.generatedContent || "Hmm… my inventions exploded!";
+
+    const content = response.data.candidates?.[0]?.content;
+    return content || "Hmm… my inventions exploded!";
   } catch (err) {
-    console.error("Gemini AI error:", err);
+    console.error("Google AI error:", err);
     return "⚠️ Oops! My inventions exploded in the code again!";
   }
 }
@@ -57,9 +55,10 @@ const commands = [
   new SlashCommandBuilder().setName("invention").setDescription("Dr. Nefario unveils a random invention."),
   new SlashCommandBuilder().setName("greet").setDescription("Dr. Nefario greets you."),
   new SlashCommandBuilder().setName("mad").setDescription("Dr. Nefario gets mad scientifically!"),
-].map((c) => c.toJSON());
+].map(c => c.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
 (async () => {
   try {
     log("Registering slash commands...");
@@ -86,7 +85,7 @@ client.on(Events.MessageCreate, async (message) => {
       Respond in character to this message: "${message.content}"
       Use funny, dramatic, scientific language. Keep it short and chaotic.
     `;
-    const reply = await getGeminiReply(prompt);
+    const reply = await getAIResponse(prompt);
     await message.reply(reply);
     log(`💬 Replied to ${message.author.tag} in #${message.channel.name}: "${reply}"`);
   }
@@ -108,10 +107,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (prompt) {
-    const reply = await getGeminiReply(prompt);
+    const reply = await getAIResponse(prompt);
     await interaction.reply(reply);
     log(`🔧 /${command} used by ${interaction.user.tag}`);
   }
 });
 
+// --- Login ---
 client.login(process.env.DISCORD_TOKEN);
