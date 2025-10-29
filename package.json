@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "dependencies": {
-    "discord.js": "^14.24.0",
+    "discord.js": "^14.24.1",
     "dotenv": "^16.4.5",
     "axios": "^1.13.0"
   }
