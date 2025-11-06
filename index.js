@@ -5,39 +5,40 @@ import axios from 'axios';
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`⚙️ Logged in as ${client.user.tag}`);
 });
 
-// Function to call Google AI
+// === Function to call Gemini API ===
 async function getAIResponse(prompt) {
   try {
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate?key=${process.env.GOOGLE_API_KEY}`,
+    const res = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
       {
-        prompt: { text: prompt },
-        temperature: 0.7,
-        maxOutputTokens: 256,
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
       }
     );
 
-    return response.data?.candidates?.[0]?.output || "Hmm… I couldn't think of anything!";
+    const reply = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return reply || "Hmm… I seem to have misplaced my glasses again!";
   } catch (err) {
-    console.error('Google AI error:', err.message);
-    return "Something went wrong with my AI gears!";
+    console.error("🧪 Google AI error:", err.response?.data || err.message);
+    return "Blast! My AI circuits just exploded!";
   }
 }
 
-// Handle slash commands
+// === Command handling ===
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
-  await interaction.deferReply(); // Acknowledge immediately
+  await interaction.deferReply();
 
-  let prompt = '';
-  if (interaction.commandName === 'greet') {
-    prompt = "You are Dr. Nefario. Greet the user in character with eccentric, scientific language.";
-  } else if (interaction.commandName === 'invention') {
-    prompt = "You are Dr. Nefario. Announce a chaotic, funny invention in character.";
+  let prompt = "";
+  if (interaction.commandName === "greet") {
+    prompt = "You are Dr. Nefario from Despicable Me. Greet the user with eccentric energy and lots of scientific flair.";
+  } else if (interaction.commandName === "invention") {
+    prompt = "You are Dr. Nefario. Announce your latest chaotic invention in a dramatic and funny way.";
+  } else if (interaction.commandName === "experiment") {
+    prompt = "You are Dr. Nefario. Describe a risky experiment you are conducting with wild enthusiasm.";
   }
 
   const reply = await getAIResponse(prompt);
