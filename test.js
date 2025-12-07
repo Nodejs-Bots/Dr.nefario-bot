@@ -7,7 +7,6 @@ const path = require('path');
 
 const requiredFiles = [
     'index.js',
-    'test_token.js',
     'package.json',
     '.env',
     'updates.js',
@@ -29,7 +28,7 @@ requiredFiles.forEach(file => {
 // Test 2: Check package.json dependencies
 try {
     const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    const requiredDeps = ['discord.js', 'dotenv'];
+    const requiredDeps = ['discord.js', 'dotenv', 'axios', 'node-fetch'];
     
     requiredDeps.forEach(dep => {
         if (packageJson.dependencies && packageJson.dependencies[dep]) {
