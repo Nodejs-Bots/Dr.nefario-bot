@@ -37,8 +37,6 @@ client.on('interactionCreate', async interaction => {
     prompt = "You are Dr. Nefario from Despicable Me. Greet the user with eccentric energy and lots of scientific flair.";
   } else if (interaction.commandName === "invention") {
     prompt = "You are Dr. Nefario. Announce your latest chaotic invention in a dramatic and funny way.";
-  } else if (interaction.commandName === "experiment") {
-    prompt = "You are Dr. Nefario. Describe a risky experiment you are conducting with wild enthusiasm.";
   }
 
   const reply = await getAIResponse(prompt);
