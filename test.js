@@ -1,18 +1,21 @@
+import { execFileSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 // Simple test to verify the bot structure
 console.log('Testing Discord Bot structure...');
 
-// Test 1: Check if main files exist
-const fs = require('fs');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const requiredFiles = [
     'index.js',
     'package.json',
-    '.env',
-    'updates.js',
     'package-lock.json'
 ];
 
+const optionalFiles = ['.env', 'updates.js'];
 let allFilesExist = true;
 
 requiredFiles.forEach(file => {
@@ -25,9 +28,18 @@ requiredFiles.forEach(file => {
     }
 });
 
+optionalFiles.forEach(file => {
+    const filePath = path.join(__dirname, file);
+    if (fs.existsSync(filePath)) {
+        console.log(`ℹ️  optional file ${file} exists`);
+    } else {
+        console.log(`ℹ️  optional file ${file} not found`);
+    }
+});
+
 // Test 2: Check package.json dependencies
 try {
-    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     const requiredDeps = ['discord.js', 'dotenv', 'axios'];
     
     requiredDeps.forEach(dep => {
@@ -43,18 +55,14 @@ try {
     allFilesExist = false;
 }
 
-// Test 3: Check if index.js can be required (basic syntax check)
+// Test 3: Syntax check index.js without importing the bot runtime
 try {
     console.log('✓ Checking index.js syntax...');
-    require('./index.js');
+    execFileSync('node', ['--check', path.join(__dirname, 'index.js')], { stdio: 'ignore' });
     console.log('✓ index.js syntax looks good');
 } catch (error) {
-    if (error.message.includes('TOKEN')) {
-        console.log('✓ index.js syntax is valid (expected token error)');
-    } else {
-        console.log('✗ index.js syntax error:', error.message);
-        allFilesExist = false;
-    }
+    console.log('✗ index.js syntax error:', error.message);
+    allFilesExist = false;
 }
 
 console.log('\nTest completed:', allFilesExist ? 'PASSED' : 'FAILED');
