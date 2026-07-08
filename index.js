@@ -5,7 +5,7 @@ import axios from 'axios';
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once('ready', () => {
-  console.log(`⚙️ Logged in as ${client.user.tag}`);
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
 // === Function to call Gemini API ===
