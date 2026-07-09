@@ -40,7 +40,7 @@ optionalFiles.forEach(file => {
 // Test 2: Check package.json dependencies
 try {
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-    const requiredDeps = ['discord.js', 'dotenv', 'axios'];
+    const requiredDeps = ['axios', 'discord.js', 'dotenv'];
     
     requiredDeps.forEach(dep => {
         if (packageJson.dependencies && packageJson.dependencies[dep]) {
