@@ -15,7 +15,7 @@ const requiredFiles = [
     'package-lock.json'
 ];
 
-const optionalFiles = ['.env', 'updates.js'];
+const optionalFiles = ['.env'];
 let allFilesExist = true;
 
 requiredFiles.forEach(file => {
