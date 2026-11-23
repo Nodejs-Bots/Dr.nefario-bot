@@ -26,7 +26,7 @@ async function getAIResponse(prompt) {
   }
 }
 
-// === Command handling ===
+// === Command Handling ===
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
