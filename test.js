@@ -12,10 +12,11 @@ const __dirname = path.dirname(__filename);
 const requiredFiles = [
     'index.js',
     'package.json',
-    'package-lock.json'
+    'package-lock.json',
+    '.env'
 ];
 
-const optionalFiles = ['.env'];
+const optionalFiles = ['.gitignore'];
 let allFilesExist = true;
 
 requiredFiles.forEach(file => {
